@@ -7,17 +7,17 @@ import (
 	"github.com/vektah/gqlparser/v2/ast"
 )
 
-type state struct {
+type State struct {
 	schema  *ast.Schema
 	locator locator
-
-	typeFunc  func(*ast.Type)
-	fieldFunc func(*ast.FieldDefinition)
-	defFunc   func(*ast.Definition)
-	argFunc   func(*ast.ArgumentDefinition)
 }
 
-func newFromFile(fname string) (*state, error) {
+type Position struct {
+	Line int
+	Col  int
+}
+
+func NewFromFile(fname string) (*State, error) {
 	dat, err := os.ReadFile(fname)
 	if err != nil {
 		return nil, err
@@ -32,47 +32,74 @@ func newFromFile(fname string) (*state, error) {
 		return nil, err
 	}
 
-	return &state{
+	return &State{
 		schema:    schema,
-		typeFunc:  handleType,
-		fieldFunc: handleField,
-		defFunc:   handleDef,
-		argFunc:   handleArg,
+		locator:   make(locator),
 	}, nil
 }
 
-func handleType(ty *ast.Type) {
+func (s *State) GetDefinitionOf(line, col int) *Position {
+	sym := s.locator.get(line, col)
+	ty := lift[*ast.Type](sym)
+	if ty == nil {
+		return nil
+	}
 
+	defType, ok := s.schema.Types[ty.Name()]
+	if !ok {
+		return nil
+	}
+
+	return &Position{
+		Line: defType.Position.Line,
+		Col: defType.Position.Column,
+	}
 }
 
-func handleField(ty *ast.FieldDefinition) {
-
+func (s *State) handleType(ty *ast.Type) {
+	s.locator.push(location{
+		start: ty.Position.Column,
+		end: ty.Position.End - ty.Position.End,
+	}, ty.Position.Line)
 }
 
-func handleDef(ty *ast.Definition) {
-
+func (s *State) handleField(ty *ast.FieldDefinition) {
+	s.locator.push(location{
+		start: ty.Position.Column,
+		end: ty.Position.End - ty.Position.End,
+	}, ty.Position.Line)
 }
 
-func handleArg(ty *ast.ArgumentDefinition) {
-
+func (s *State) handleDef(ty *ast.Definition) {
+	s.locator.push(location{
+		start: ty.Position.Column,
+		end: ty.Position.End - ty.Position.End,
+	}, ty.Position.Line)
 }
 
-func (s *state) walk(def *ast.Definition) {
+func (s *State) handleArg(ty *ast.ArgumentDefinition) {
+	s.locator.push(location{
+		start: ty.Position.Column,
+		end: ty.Position.End - ty.Position.End,
+	}, ty.Position.Line)
+}
+
+func (s *State) walk(def *ast.Definition) {
 	switch def.Kind {
 	case ast.Scalar:
-		s.defFunc(def)
+		s.handleDef(def)
 	case ast.Object:
 		s.walkObj(def)
 	}
 }
 
-func (s *state) walkObj(def *ast.Definition) {
+func (s *State) walkObj(def *ast.Definition) {
 	if def.Name[0:2] == "__" {
 		// no doing stuff with meta types which get populated into the AST
 		return
 	}
 
-	s.defFunc(def)
+	s.handleDef(def)
 	for _, v := range def.Fields {
 		if v != nil {
 			s.walkField(v)
@@ -80,30 +107,30 @@ func (s *state) walkObj(def *ast.Definition) {
 	}
 }
 
-func (s *state) walkField(def *ast.FieldDefinition) {
-	s.fieldFunc(def)
+func (s *State) walkField(def *ast.FieldDefinition) {
+	s.handleField(def)
 	s.walkFieldArgs(def.Arguments)
-	s.typeFunc(def.Type)
+	s.handleType(def.Type)
 	if def.Type.Elem != nil {
 		s.walkArray(def.Type.Elem)
 	}
 }
 
-func (s *state) walkArray(ty *ast.Type) {
+func (s *State) walkArray(ty *ast.Type) {
 	if ty.Elem != nil {
 		s.walkArray(ty.Elem)
 	}
 }
 
-func (s *state) walkFieldArgs(args ast.ArgumentDefinitionList) {
+func (s *State) walkFieldArgs(args ast.ArgumentDefinitionList) {
 	for _, v := range args {
 		s.walkFieldArg(v)
 	}
 }
 
-func (s *state) walkFieldArg(arg *ast.ArgumentDefinition) {
-	s.argFunc(arg)
-	s.typeFunc(arg.Type)
+func (s *State) walkFieldArg(arg *ast.ArgumentDefinition) {
+	s.handleArg(arg)
+	s.handleType(arg.Type)
 	if arg.Type.Elem != nil {
 		s.walkArray(arg.Type.Elem)
 	}

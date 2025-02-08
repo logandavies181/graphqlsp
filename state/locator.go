@@ -3,23 +3,17 @@ package state
 import (
 	"fmt"
 	"os"
-
-	"github.com/vektah/gqlparser/v2/ast"
 )
 
-type symbol interface {
-	*ast.Definition | *ast.FieldDefinition | *ast.Type | *ast.ArgumentDefinition
-}
-
-type location[S symbol] struct {
-	s     S
+type location struct {
+	s     any
 	start int
 	end   int
 }
 
-type locator[S symbol] map[int][]location[S]
+type locator map[int][]location
 
-func (l locator[S]) push(loc location[S], line int) {
+func (l locator) push(loc location, line int) {
 	if overlaps(loc, l[line]) {
 		fmt.Fprintf(os.Stderr, "overlapping symbol, cannot push")
 		return
@@ -28,7 +22,7 @@ func (l locator[S]) push(loc location[S], line int) {
 	l[line] = append(l[line], loc)
 }
 
-func (l locator[S]) get(line, col int) S {
+func (l locator) get(line, col int) any {
 	if val, ok := l[line]; ok {
 		for _, v := range val {
 			if col >= v.start && col <= v.end {
@@ -39,7 +33,7 @@ func (l locator[S]) get(line, col int) S {
 	return nil
 }
 
-func overlaps[S symbol](loc location[S], locs []location[S]) bool {
+func overlaps(loc location, locs []location) bool {
 	for _, v := range locs {
 		if loc.start >= v.start && loc.end <= v.end {
 			return true
