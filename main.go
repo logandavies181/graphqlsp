@@ -11,15 +11,14 @@ import (
 	"github.com/tliron/glsp/server"
 )
 
-
 var version string = "0.0.1"
 var handler protocol.Handler
 
 func main() {
 	handler = protocol.Handler{
 		TextDocumentDefinition: definition,
-		Initialize: initialize,
-		Shutdown:   shutdown,
+		Initialize:             initialize,
+		Shutdown:               shutdown,
 	}
 
 	server := server.NewServer(&handler, "testls", true)
@@ -60,7 +59,7 @@ func definition(context *glsp.Context, params *protocol.DefinitionParams) (any, 
 		return nil, fmt.Errorf("could not load state from file %s: %w", url.Path, err)
 	}
 
-	pos := s.GetDefinitionOf(int(params.Position.Line) + 1, int(params.Position.Character) + 1)
+	pos := s.GetDefinitionOf(int(params.Position.Line)+1, int(params.Position.Character)+1)
 	if pos == nil {
 		return nil, nil
 	}
@@ -69,11 +68,11 @@ func definition(context *glsp.Context, params *protocol.DefinitionParams) (any, 
 		URI: params.TextDocument.URI,
 		Range: protocol.Range{
 			Start: protocol.Position{
-				Line: uint32(pos.Line - 1),
+				Line:      uint32(pos.Line - 1),
 				Character: uint32(pos.Col - 1),
 			},
 			End: protocol.Position{
-				Line: uint32(pos.Line - 1),
+				Line:      uint32(pos.Line - 1),
 				Character: uint32(pos.Col - 1 + pos.Len),
 			},
 		},
