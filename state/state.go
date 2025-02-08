@@ -32,10 +32,18 @@ func NewFromFile(fname string) (*State, error) {
 		return nil, err
 	}
 
-	return &State{
+	state := &State{
 		schema:    schema,
 		locator:   make(locator),
-	}, nil
+	}
+
+	state.walk(schema.Query)
+	state.walk(schema.Mutation)
+	for _, v := range schema.Types {
+		state.walk(v)
+	}
+
+	return state, nil
 }
 
 func (s *State) GetDefinitionOf(line, col int) *Position {
@@ -57,30 +65,50 @@ func (s *State) GetDefinitionOf(line, col int) *Position {
 }
 
 func (s *State) handleType(ty *ast.Type) {
+	if ty.Name()[0:2] == "__" || ty.Position == nil {
+		return
+	}
+
 	s.locator.push(location{
+		s: ty,
 		start: ty.Position.Column,
-		end: ty.Position.End - ty.Position.End,
+		end: ty.Position.Column + ty.Position.End - ty.Position.Start,
 	}, ty.Position.Line)
 }
 
 func (s *State) handleField(ty *ast.FieldDefinition) {
+	if ty.Name[0:2] == "__" || ty.Position == nil {
+		return
+	}
+
 	s.locator.push(location{
+		s: ty,
 		start: ty.Position.Column,
-		end: ty.Position.End - ty.Position.End,
+		end: ty.Position.Column + ty.Position.End - ty.Position.Start,
 	}, ty.Position.Line)
 }
 
 func (s *State) handleDef(ty *ast.Definition) {
+	if ty.Name[0:2] == "__" || ty.Position == nil {
+		return
+	}
+
 	s.locator.push(location{
+		s: ty,
 		start: ty.Position.Column,
-		end: ty.Position.End - ty.Position.End,
+		end: ty.Position.Column + ty.Position.End - ty.Position.Start,
 	}, ty.Position.Line)
 }
 
 func (s *State) handleArg(ty *ast.ArgumentDefinition) {
+	if ty.Name[0:2] == "__" || ty.Position == nil {
+		return
+	}
+
 	s.locator.push(location{
+		s: ty,
 		start: ty.Position.Column,
-		end: ty.Position.End - ty.Position.End,
+		end: ty.Position.Column + ty.Position.End - ty.Position.Start,
 	}, ty.Position.Line)
 }
 

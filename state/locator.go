@@ -15,8 +15,10 @@ type locator map[int][]location
 
 func (l locator) push(loc location, line int) {
 	if overlaps(loc, l[line]) {
-		fmt.Fprintf(os.Stderr, "overlapping symbol, cannot push")
+		fmt.Fprintf(os.Stderr, "overlapping symbol, cannot push. %s\n", loc.s)
 		return
+	} else {
+		fmt.Fprintf(os.Stderr, "pushing ok: %s, %d, %d\n", loc.s, line, loc.start)
 	}
 
 	l[line] = append(l[line], loc)
@@ -26,6 +28,7 @@ func (l locator) get(line, col int) any {
 	if val, ok := l[line]; ok {
 		for _, v := range val {
 			if col >= v.start && col <= v.end {
+				fmt.Fprintf(os.Stderr, "found: %v\n", v.s)
 				return v.s
 			}
 		}

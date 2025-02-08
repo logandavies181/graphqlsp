@@ -7,5 +7,9 @@ type symbol interface {
 }
 
 func lift[S symbol](in any) S {
-	return in.(S)
+	s, ok := in.(S)
+	if !ok {
+		return nil
+	}
+	return s
 }
