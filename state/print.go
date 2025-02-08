@@ -6,7 +6,6 @@ import (
 	"github.com/vektah/gqlparser/v2/ast"
 )
 
-
 func printPos(def *ast.Definition) {
 	pos := def.Position
 	fmt.Printf("top level type %s: %s on line %d, column %d\n", def.Name, def.Kind, pos.Line, pos.Column)

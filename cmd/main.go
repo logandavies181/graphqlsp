@@ -117,7 +117,7 @@ func mainE() error {
 	}
 
 	source := ast.Source{
-		Name: "schema.graphql",
+		Name:  "schema.graphql",
 		Input: string(dat),
 	}
 	schema, err := gqlparser.LoadSchema(&source)

@@ -12,9 +12,9 @@ type symbol interface {
 }
 
 type location[S symbol] struct {
-	s S
+	s     S
 	start int
-	end int
+	end   int
 }
 
 type locator[S symbol] map[int][]location[S]
@@ -32,7 +32,7 @@ func (l locator[S]) get(line, col int) S {
 	if val, ok := l[line]; ok {
 		for _, v := range val {
 			if col >= v.start && col <= v.end {
-				return v.s 
+				return v.s
 			}
 		}
 	}

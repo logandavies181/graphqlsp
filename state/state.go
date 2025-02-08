@@ -8,13 +8,13 @@ import (
 )
 
 type state struct {
-	schema *ast.Schema
+	schema  *ast.Schema
 	locator locator
 
-	typeFunc func(*ast.Type)
+	typeFunc  func(*ast.Type)
 	fieldFunc func(*ast.FieldDefinition)
-	defFunc func(*ast.Definition)
-	argFunc func(*ast.ArgumentDefinition)
+	defFunc   func(*ast.Definition)
+	argFunc   func(*ast.ArgumentDefinition)
 }
 
 func newFromFile(fname string) (*state, error) {
@@ -24,7 +24,7 @@ func newFromFile(fname string) (*state, error) {
 	}
 
 	source := ast.Source{
-		Name: fname,
+		Name:  fname,
 		Input: string(dat),
 	}
 	schema, err := gqlparser.LoadSchema(&source)
@@ -33,11 +33,11 @@ func newFromFile(fname string) (*state, error) {
 	}
 
 	return &state{
-		schema: schema,
-		typeFunc: handleType,
+		schema:    schema,
+		typeFunc:  handleType,
 		fieldFunc: handleField,
-		defFunc: handleDef,
-		argFunc: handleArg,
+		defFunc:   handleDef,
+		argFunc:   handleArg,
 	}, nil
 }
 
