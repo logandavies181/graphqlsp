@@ -5,11 +5,10 @@ import (
 	"net/url"
 	"os"
 
+	"github.com/logandavies181/graphqlsp/state"
 	"github.com/tliron/glsp"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 	"github.com/tliron/glsp/server"
-	"github.com/vektah/gqlparser/v2"
-	"github.com/vektah/gqlparser/v2/ast"
 )
 
 
@@ -46,87 +45,36 @@ func shutdown(context *glsp.Context) error {
 	return nil
 }
 
-type pos struct {
-	line int
-	col int
-	len int
-
-	name string
-}
-
-func getFromASTAt(uri string, line, char uint32) (pos, error) {
-	_url, err := url.Parse(uri)
-	if err != nil {
-		return pos{}, err
-	}
-
-	dat, err := os.ReadFile(_url.Path)
-	if err != nil {
-		return pos{}, err
-	}
-
-	source := ast.Source{
-		Name: "schema.graphql",
-		Input: string(dat),
-	}
-	schema, err := gqlparser.LoadSchema(&source)
-	if err != nil {
-		return pos{}, err
-	}
-
-	locs := []pos{}
-	for _, v := range schema.Types {
-		vpos := v.Position
-		locs = append(locs, pos{
-			line: vpos.Line,
-			col: vpos.Column,
-			len: vpos.End - vpos.Start,
-			name: v.Name,
-		})
-	}
-
-	isWithin := func(line, char int, pos pos) bool {
-		if line != pos.line {
-			return false
-		}
-
-		if char < pos.col || char > pos.col + pos.len {
-			return false
-		}
-
-		return true
-	}
-
-	for _, v := range locs {
-		if !isWithin(int(line), int(char), v) {
-			continue
-		}
-
-		v.
-	}
-
-	return pos{}, nil
-}
-
 func definition(context *glsp.Context, params *protocol.DefinitionParams) (any, error) {
 	fmt.Fprintln(os.Stderr, params.TextDocument.URI)
 	fmt.Fprintln(os.Stderr, params.Position.Line)
 	fmt.Fprintln(os.Stderr, params.Position.Character)
-	pos, err := getFromASTAt(params.TextDocument.URI, params.Position.Line, params.Position.Character)
+
+	url, err := url.Parse(params.TextDocument.URI)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not parse file uri", err)
+	}
+
+	s, err := state.NewFromFile(url.Path)
+	if err != nil {
+		return nil, fmt.Errorf("could not load state from file %s: %w", url.Path, err)
+	}
+
+	pos := s.GetDefinitionOf(int(params.Position.Line) + 1, int(params.Position.Character) + 1)
+	if pos == nil {
+		return nil, nil
 	}
 
 	return protocol.Location{
 		URI: params.TextDocument.URI,
 		Range: protocol.Range{
 			Start: protocol.Position{
-				Line: uint32(pos.line),
-				Character: uint32(pos.col),
+				Line: uint32(pos.Line - 1),
+				Character: uint32(pos.Col - 1),
 			},
 			End: protocol.Position{
-				Line: uint32(pos.line),
-				Character: uint32(pos.col + pos.len),
+				Line: uint32(pos.Line - 1),
+				Character: uint32(pos.Col - 1 + pos.Len),
 			},
 		},
 	}, nil
