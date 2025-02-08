@@ -13,5 +13,5 @@ func TestGetDef(t *testing.T) {
 	pos := s.GetDefinitionOf(55, 9)
 
 	assert.NotNil(t, pos)
-	assert.Equal(t, &Position{1, 6}, pos)
+	assert.Equal(t, &Position{1, 6, 5, false}, pos)
 }

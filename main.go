@@ -4,15 +4,18 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path"
 
 	"github.com/logandavies181/graphqlsp/state"
 	"github.com/tliron/glsp"
 	protocol "github.com/tliron/glsp/protocol_3_16"
 	"github.com/tliron/glsp/server"
+	"github.com/vektah/gqlparser/v2/validator"
 )
 
 var version string = "0.0.1"
 var handler protocol.Handler
+var tempDir string
 
 func main() {
 	handler = protocol.Handler{
@@ -26,7 +29,22 @@ func main() {
 	server.RunStdio()
 }
 
+func preludeFilePath() string {
+	return path.Join(tempDir, "prelude.graphql")
+}
+
 func initialize(context *glsp.Context, params *protocol.InitializeParams) (any, error) {
+	var err error
+	tempDir, err = os.MkdirTemp("", "graphqlsp")
+	if err != nil {
+		return nil, fmt.Errorf("could not create temp dir for prelude: %w", err)
+	}
+
+	err = os.WriteFile(preludeFilePath(), []byte(validator.Prelude.Input), 0700)
+	if err != nil {
+		return nil, fmt.Errorf("could not write to temp file for prelude: %w", err)
+	}
+
 	capabilities := handler.CreateServerCapabilities()
 
 	capabilities.CompletionProvider = &protocol.CompletionOptions{}
@@ -41,7 +59,7 @@ func initialize(context *glsp.Context, params *protocol.InitializeParams) (any, 
 }
 
 func shutdown(context *glsp.Context) error {
-	return nil
+	return os.RemoveAll(tempDir)
 }
 
 func definition(context *glsp.Context, params *protocol.DefinitionParams) (any, error) {
@@ -51,7 +69,7 @@ func definition(context *glsp.Context, params *protocol.DefinitionParams) (any, 
 
 	url, err := url.Parse(params.TextDocument.URI)
 	if err != nil {
-		return nil, fmt.Errorf("could not parse file uri", err)
+		return nil, fmt.Errorf("could not parse file uri: %w", err)
 	}
 
 	s, err := state.NewFromFile(url.Path)
@@ -64,8 +82,13 @@ func definition(context *glsp.Context, params *protocol.DefinitionParams) (any, 
 		return nil, nil
 	}
 
+	file := params.TextDocument.URI
+	if pos.Prelude {
+		file = "file://" + preludeFilePath()
+	}
+
 	return protocol.Location{
-		URI: params.TextDocument.URI,
+		URI: file,
 		Range: protocol.Range{
 			Start: protocol.Position{
 				Line:      uint32(pos.Line - 1),

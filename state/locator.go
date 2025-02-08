@@ -9,16 +9,14 @@ type location struct {
 	s     any
 	start int
 	end   int
+	prelude bool
 }
 
 type locator map[int][]location
 
 func (l locator) push(loc location, line int) {
 	if overlaps(loc, l[line]) {
-		fmt.Fprintf(os.Stderr, "overlapping symbol, cannot push. %s\n", loc.s)
 		return
-	} else {
-		fmt.Fprintf(os.Stderr, "pushing ok: %s, %d, %d\n", loc.s, line, loc.start)
 	}
 
 	l[line] = append(l[line], loc)

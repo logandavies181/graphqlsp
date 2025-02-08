@@ -16,6 +16,7 @@ type Position struct {
 	Line int
 	Col  int
 	Len  int
+	Prelude bool
 }
 
 func NewFromFile(fname string) (*State, error) {
@@ -63,6 +64,7 @@ func (s *State) GetDefinitionOf(line, col int) *Position {
 		Line: defType.Position.Line,
 		Col: defType.Position.Column,
 		Len: defType.Position.End - defType.Position.Start,
+		Prelude: defType.BuiltIn,
 	}
 }
 
@@ -99,6 +101,7 @@ func (s *State) handleDef(ty *ast.Definition) {
 		s: ty,
 		start: ty.Position.Column,
 		end: ty.Position.Column + ty.Position.End - ty.Position.Start,
+		prelude: ty.Position.Src.BuiltIn,
 	}, ty.Position.Line)
 }
 
