@@ -13,9 +13,9 @@ type State struct {
 }
 
 type Position struct {
-	Line int
-	Col  int
-	Len  int
+	Line    int
+	Col     int
+	Len     int
 	Prelude bool
 }
 
@@ -35,8 +35,8 @@ func NewFromFile(fname string) (*State, error) {
 	}
 
 	state := &State{
-		schema:    schema,
-		locator:   make(locator),
+		schema:  schema,
+		locator: make(locator),
 	}
 
 	state.walk(schema.Query)
@@ -61,9 +61,9 @@ func (s *State) GetDefinitionOf(line, col int) *Position {
 	}
 
 	return &Position{
-		Line: defType.Position.Line,
-		Col: defType.Position.Column,
-		Len: defType.Position.End - defType.Position.Start,
+		Line:    defType.Position.Line,
+		Col:     defType.Position.Column,
+		Len:     defType.Position.End - defType.Position.Start,
 		Prelude: defType.BuiltIn,
 	}
 }
@@ -74,9 +74,9 @@ func (s *State) handleType(ty *ast.Type) {
 	}
 
 	s.locator.push(location{
-		s: ty,
+		s:     ty,
 		start: ty.Position.Column,
-		end: ty.Position.Column + ty.Position.End - ty.Position.Start,
+		end:   ty.Position.Column + ty.Position.End - ty.Position.Start,
 	}, ty.Position.Line)
 }
 
@@ -86,9 +86,9 @@ func (s *State) handleField(ty *ast.FieldDefinition) {
 	}
 
 	s.locator.push(location{
-		s: ty,
+		s:     ty,
 		start: ty.Position.Column,
-		end: ty.Position.Column + ty.Position.End - ty.Position.Start,
+		end:   ty.Position.Column + ty.Position.End - ty.Position.Start,
 	}, ty.Position.Line)
 }
 
@@ -98,9 +98,9 @@ func (s *State) handleDef(ty *ast.Definition) {
 	}
 
 	s.locator.push(location{
-		s: ty,
-		start: ty.Position.Column,
-		end: ty.Position.Column + ty.Position.End - ty.Position.Start,
+		s:       ty,
+		start:   ty.Position.Column,
+		end:     ty.Position.Column + ty.Position.End - ty.Position.Start,
 		prelude: ty.Position.Src.BuiltIn,
 	}, ty.Position.Line)
 }
@@ -111,9 +111,9 @@ func (s *State) handleArg(ty *ast.ArgumentDefinition) {
 	}
 
 	s.locator.push(location{
-		s: ty,
+		s:     ty,
 		start: ty.Position.Column,
-		end: ty.Position.Column + ty.Position.End - ty.Position.Start,
+		end:   ty.Position.Column + ty.Position.End - ty.Position.Start,
 	}, ty.Position.Line)
 }
 

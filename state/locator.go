@@ -6,9 +6,9 @@ import (
 )
 
 type location struct {
-	s     any
-	start int
-	end   int
+	s       any
+	start   int
+	end     int
 	prelude bool
 }
 
