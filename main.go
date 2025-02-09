@@ -20,7 +20,7 @@ var tempDir string
 func main() {
 	handler = protocol.Handler{
 		TextDocumentDefinition: definition,
-		TextDocumentHover: hover,
+		TextDocumentHover:      hover,
 		Initialize:             initialize,
 		Shutdown:               shutdown,
 	}

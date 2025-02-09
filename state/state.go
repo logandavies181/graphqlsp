@@ -107,7 +107,7 @@ func (s *State) GetHoverOf(line, col int) (*protocol.MarkupContent, *Position) {
 		}
 
 		mu := protocol.MarkupContent{
-			Kind: protocol.MarkupKindMarkdown,
+			Kind:  protocol.MarkupKindMarkdown,
 			Value: formatDescriptionMarkdown(*defType),
 		}
 
