@@ -1,10 +1,5 @@
 package state
 
-import (
-	"fmt"
-	"os"
-)
-
 type location struct {
 	s       any
 	start   int
@@ -26,7 +21,6 @@ func (l locator) get(line, col int) any {
 	if val, ok := l[line]; ok {
 		for _, v := range val {
 			if col >= v.start && col <= v.end {
-				fmt.Fprintf(os.Stderr, "found: %v\n", v.s)
 				return v.s
 			}
 		}

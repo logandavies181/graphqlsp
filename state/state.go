@@ -1,8 +1,10 @@
 package state
 
 import (
+	"fmt"
 	"os"
 
+	protocol "github.com/tliron/glsp/protocol_3_16"
 	"github.com/vektah/gqlparser/v2"
 	"github.com/vektah/gqlparser/v2/ast"
 )
@@ -65,6 +67,58 @@ func (s *State) GetDefinitionOf(line, col int) *Position {
 		Col:     defType.Position.Column,
 		Len:     defType.Position.End - defType.Position.Start,
 		Prelude: defType.BuiltIn,
+	}
+}
+
+func defKindToKeyword(kind ast.DefinitionKind) string {
+	switch kind {
+	case ast.Scalar:
+		return "scalar"
+	case ast.Object:
+		return "type"
+	case ast.Enum:
+		return "enum"
+	case ast.Union:
+		return "union"
+	case ast.Interface:
+		return "interface"
+	case ast.InputObject:
+		return "input"
+	default:
+		return ""
+	}
+}
+
+func formatDescriptionMarkdown(def ast.Definition) string {
+	return fmt.Sprintf("```graphql\n%s %s\n```\n%s", defKindToKeyword(def.Kind), def.Name, def.Description)
+}
+
+func (s *State) GetHoverOf(line, col int) (*protocol.MarkupContent, *Position) {
+	sym := s.locator.get(line, col)
+	switch ty := sym.(type) {
+	case *ast.Type:
+		if ty == nil {
+			return nil, nil
+		}
+
+		defType, ok := s.schema.Types[ty.Name()]
+		if !ok {
+			return nil, nil
+		}
+
+		mu := protocol.MarkupContent{
+			Kind: protocol.MarkupKindMarkdown,
+			Value: formatDescriptionMarkdown(*defType),
+		}
+
+		return &mu, &Position{
+			Line:    defType.Position.Line,
+			Col:     defType.Position.Column,
+			Len:     defType.Position.End - defType.Position.Start,
+			Prelude: defType.BuiltIn,
+		}
+	default:
+		return nil, nil
 	}
 }
 

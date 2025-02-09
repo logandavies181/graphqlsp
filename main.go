@@ -20,6 +20,7 @@ var tempDir string
 func main() {
 	handler = protocol.Handler{
 		TextDocumentDefinition: definition,
+		TextDocumentHover: hover,
 		Initialize:             initialize,
 		Shutdown:               shutdown,
 	}
@@ -63,10 +64,6 @@ func shutdown(context *glsp.Context) error {
 }
 
 func definition(context *glsp.Context, params *protocol.DefinitionParams) (any, error) {
-	fmt.Fprintln(os.Stderr, params.TextDocument.URI)
-	fmt.Fprintln(os.Stderr, params.Position.Line)
-	fmt.Fprintln(os.Stderr, params.Position.Character)
-
 	url, err := url.Parse(params.TextDocument.URI)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse file uri: %w", err)
@@ -90,6 +87,37 @@ func definition(context *glsp.Context, params *protocol.DefinitionParams) (any, 
 	return protocol.Location{
 		URI: file,
 		Range: protocol.Range{
+			Start: protocol.Position{
+				Line:      uint32(pos.Line - 1),
+				Character: uint32(pos.Col - 1),
+			},
+			End: protocol.Position{
+				Line:      uint32(pos.Line - 1),
+				Character: uint32(pos.Col - 1 + pos.Len),
+			},
+		},
+	}, nil
+}
+
+func hover(context *glsp.Context, params *protocol.HoverParams) (*protocol.Hover, error) {
+	url, err := url.Parse(params.TextDocument.URI)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse file uri: %w", err)
+	}
+
+	s, err := state.NewFromFile(url.Path)
+	if err != nil {
+		return nil, fmt.Errorf("could not load state from file %s: %w", url.Path, err)
+	}
+
+	mu, pos := s.GetHoverOf(int(params.Position.Line)+1, int(params.Position.Character)+1)
+	if pos == nil {
+		return nil, nil
+	}
+
+	return &protocol.Hover{
+		Contents: mu,
+		Range: &protocol.Range{
 			Start: protocol.Position{
 				Line:      uint32(pos.Line - 1),
 				Character: uint32(pos.Col - 1),
