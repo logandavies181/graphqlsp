@@ -13,9 +13,12 @@ import (
 	"github.com/vektah/gqlparser/v2/validator"
 )
 
-var version string = "0.0.1"
-var handler protocol.Handler
-var tempDir string
+var (
+	version string = "0.0.1"
+	handler protocol.Handler
+	tempDir string
+	states  map[string]*state.State
+)
 
 func main() {
 	handler = protocol.Handler{
@@ -28,6 +31,26 @@ func main() {
 	server := server.NewServer(&handler, "testls", true)
 
 	server.RunStdio()
+}
+
+func loadFile(uri string) (*state.State, error) {
+	url, err := url.Parse(uri)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse file uri: %w", err)
+	}
+
+	path := url.Path
+	s, ok := states[path]
+	if ok {
+		return s, nil
+	}
+
+	s, err = state.NewFromFile(url.Path)
+	if err != nil {
+		return nil, fmt.Errorf("could not load state from file %s: %w", url.Path, err)
+	}
+
+	return s, nil
 }
 
 func preludeFilePath() string {
@@ -45,6 +68,8 @@ func initialize(context *glsp.Context, params *protocol.InitializeParams) (any, 
 	if err != nil {
 		return nil, fmt.Errorf("could not write to temp file for prelude: %w", err)
 	}
+
+	states[preludeFilePath()] = state.PreludeState()
 
 	capabilities := handler.CreateServerCapabilities()
 
@@ -64,14 +89,9 @@ func shutdown(context *glsp.Context) error {
 }
 
 func definition(context *glsp.Context, params *protocol.DefinitionParams) (any, error) {
-	url, err := url.Parse(params.TextDocument.URI)
+	s, err := loadFile(params.TextDocument.URI)
 	if err != nil {
-		return nil, fmt.Errorf("could not parse file uri: %w", err)
-	}
-
-	s, err := state.NewFromFile(url.Path)
-	if err != nil {
-		return nil, fmt.Errorf("could not load state from file %s: %w", url.Path, err)
+		return nil, err
 	}
 
 	pos := s.GetDefinitionOf(int(params.Position.Line)+1, int(params.Position.Character)+1)
@@ -100,14 +120,9 @@ func definition(context *glsp.Context, params *protocol.DefinitionParams) (any, 
 }
 
 func hover(context *glsp.Context, params *protocol.HoverParams) (*protocol.Hover, error) {
-	url, err := url.Parse(params.TextDocument.URI)
+	s, err := loadFile(params.TextDocument.URI)
 	if err != nil {
-		return nil, fmt.Errorf("could not parse file uri: %w", err)
-	}
-
-	s, err := state.NewFromFile(url.Path)
-	if err != nil {
-		return nil, fmt.Errorf("could not load state from file %s: %w", url.Path, err)
+		return nil, err
 	}
 
 	mu, pos := s.GetHoverOf(int(params.Position.Line)+1, int(params.Position.Character)+1)

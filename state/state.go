@@ -50,6 +50,30 @@ func NewFromFile(fname string) (*State, error) {
 	return state, nil
 }
 
+func PreludeState() *State {
+	source := ast.Source{
+		Name: "graphqlsp_internal",
+		Input: "",
+	}
+	schema, err := gqlparser.LoadSchema(&source)
+	if err != nil {
+		panic(err)
+	}
+
+	state := &State{
+		schema: schema,
+		locator: make(locator),
+	}
+
+	state.walk(schema.Query)
+	state.walk(schema.Mutation)
+	for _, v := range schema.Types {
+		state.walk(v)
+	}
+
+	return state
+}
+
 func (s *State) GetDefinitionOf(line, col int) *Position {
 	sym := s.locator.get(line, col)
 	ty := lift[*ast.Type](sym)
