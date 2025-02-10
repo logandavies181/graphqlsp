@@ -196,6 +196,10 @@ func (s *State) handleArg(ty *ast.ArgumentDefinition) {
 }
 
 func (s *State) walk(def *ast.Definition) {
+	if def == nil {
+		return
+	}
+
 	switch def.Kind {
 	case ast.Scalar:
 		s.handleDef(def)
