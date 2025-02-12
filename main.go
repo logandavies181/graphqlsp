@@ -18,7 +18,7 @@ var (
 	version string = "0.0.1"
 	handler protocol.Handler
 	tempDir string
-	states = make(map[string]*state.State)
+	states  = make(map[string]*state.State)
 )
 
 func main() {

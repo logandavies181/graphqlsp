@@ -52,7 +52,7 @@ func NewFromFile(fname string) (*State, error) {
 
 func PreludeState() *State {
 	source := ast.Source{
-		Name: "graphqlsp_internal",
+		Name:  "graphqlsp_internal",
 		Input: "",
 	}
 	schema, err := gqlparser.LoadSchema(&source)
@@ -61,7 +61,7 @@ func PreludeState() *State {
 	}
 
 	state := &State{
-		schema: schema,
+		schema:  schema,
 		locator: make(locator),
 	}
 
