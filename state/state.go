@@ -41,10 +41,10 @@ func NewFromFile(fname string) (*State, error) {
 		locator: make(locator),
 	}
 
-	state.walk(schema.Query)
-	state.walk(schema.Mutation)
+	state.walk(schema.Query, false)
+	state.walk(schema.Mutation, false)
 	for _, v := range schema.Types {
-		state.walk(v)
+		state.walk(v, false)
 	}
 
 	return state, nil
@@ -65,10 +65,10 @@ func PreludeState() *State {
 		locator: make(locator),
 	}
 
-	state.walk(schema.Query)
-	state.walk(schema.Mutation)
+	state.walk(schema.Query, true)
+	state.walk(schema.Mutation, true)
 	for _, v := range schema.Types {
-		state.walk(v)
+		state.walk(v, true)
 	}
 
 	return state
@@ -147,7 +147,7 @@ func (s *State) GetHoverOf(line, col int) (*protocol.MarkupContent, *Position) {
 }
 
 func (s *State) handleType(ty *ast.Type) {
-	if ty.Name()[0:2] == "__" || ty.Position == nil {
+	if ty.Position == nil {
 		return
 	}
 
@@ -159,7 +159,7 @@ func (s *State) handleType(ty *ast.Type) {
 }
 
 func (s *State) handleField(ty *ast.FieldDefinition) {
-	if ty.Name[0:2] == "__" || ty.Position == nil {
+	if ty.Position == nil {
 		return
 	}
 
@@ -171,7 +171,7 @@ func (s *State) handleField(ty *ast.FieldDefinition) {
 }
 
 func (s *State) handleDef(ty *ast.Definition) {
-	if ty.Name[0:2] == "__" || ty.Position == nil {
+	if ty.Position == nil {
 		return
 	}
 
@@ -184,7 +184,7 @@ func (s *State) handleDef(ty *ast.Definition) {
 }
 
 func (s *State) handleArg(ty *ast.ArgumentDefinition) {
-	if ty.Name[0:2] == "__" || ty.Position == nil {
+	if ty.Position == nil {
 		return
 	}
 
@@ -195,8 +195,8 @@ func (s *State) handleArg(ty *ast.ArgumentDefinition) {
 	}, ty.Position.Line)
 }
 
-func (s *State) walk(def *ast.Definition) {
-	if def == nil {
+func (s *State) walk(def *ast.Definition, builtinmode bool) {
+	if def == nil || (def.BuiltIn && !builtinmode) {
 		return
 	}
 
@@ -209,11 +209,6 @@ func (s *State) walk(def *ast.Definition) {
 }
 
 func (s *State) walkObj(def *ast.Definition) {
-	if def.Name[0:2] == "__" {
-		// no doing stuff with meta types which get populated into the AST
-		return
-	}
-
 	s.handleDef(def)
 	for _, v := range def.Fields {
 		if v != nil {
