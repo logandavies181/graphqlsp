@@ -15,3 +15,11 @@ func TestGetDef(t *testing.T) {
 	assert.NotNil(t, pos)
 	assert.Equal(t, &Position{1, 6, 5, false}, pos)
 }
+
+func TestPreludeState(t *testing.T) {
+	s := PreludeState()
+	assert.NotNil(t, s)
+	assert.NotNil(t, s.schema.Types["Int"])
+	assert.Equal(t, 4, s.schema.Types["Int"].Position.Line)
+	assert.Equal(t, 8, s.schema.Types["Int"].Position.Column)
+}

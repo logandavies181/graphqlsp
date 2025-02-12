@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/logandavies181/graphqlsp/state"
 	"github.com/tliron/glsp"
@@ -13,14 +14,17 @@ import (
 	"github.com/vektah/gqlparser/v2/validator"
 )
 
-var version string = "0.0.1"
-var handler protocol.Handler
-var tempDir string
+var (
+	version string = "0.0.1"
+	handler protocol.Handler
+	tempDir string
+	states  = make(map[string]*state.State)
+)
 
 func main() {
 	handler = protocol.Handler{
-		TextDocumentDefinition: definition,
-		TextDocumentHover:      hover,
+		TextDocumentDefinition: wrap(definition),
+		TextDocumentHover:      wrap(hover),
 		Initialize:             initialize,
 		Shutdown:               shutdown,
 	}
@@ -28,6 +32,43 @@ func main() {
 	server := server.NewServer(&handler, "testls", true)
 
 	server.RunStdio()
+}
+
+func wrap[T, U, V any](f func(T, U) (V, error)) func(T, U) (V, error) {
+	return func(t T, u U) (V, error) {
+		v, err := f(t, u)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v", err)
+		}
+		return v, err
+	}
+}
+
+func loadFile(uri string) (*state.State, error) {
+	url, err := url.Parse(uri)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse file uri: %w", err)
+	}
+
+	path := url.Path
+
+	if strings.HasPrefix(path, os.TempDir()) && strings.HasSuffix(path, "prelude.graphql") {
+		return states[preludeFilePath()], nil
+	}
+
+	s, ok := states[path]
+	if ok {
+		return s, nil
+	}
+
+	s, err = state.NewFromFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("could not load state from file %s: %w", path, err)
+	}
+
+	states[path] = s
+
+	return s, nil
 }
 
 func preludeFilePath() string {
@@ -46,9 +87,16 @@ func initialize(context *glsp.Context, params *protocol.InitializeParams) (any, 
 		return nil, fmt.Errorf("could not write to temp file for prelude: %w", err)
 	}
 
+	if states == nil {
+		states = make(map[string]*state.State)
+	}
+	states[preludeFilePath()] = state.PreludeState()
+
 	capabilities := handler.CreateServerCapabilities()
 
 	capabilities.CompletionProvider = &protocol.CompletionOptions{}
+
+	fmt.Fprint(os.Stderr, "graphqlsp initialized")
 
 	return protocol.InitializeResult{
 		Capabilities: capabilities,
@@ -64,14 +112,9 @@ func shutdown(context *glsp.Context) error {
 }
 
 func definition(context *glsp.Context, params *protocol.DefinitionParams) (any, error) {
-	url, err := url.Parse(params.TextDocument.URI)
+	s, err := loadFile(params.TextDocument.URI)
 	if err != nil {
-		return nil, fmt.Errorf("could not parse file uri: %w", err)
-	}
-
-	s, err := state.NewFromFile(url.Path)
-	if err != nil {
-		return nil, fmt.Errorf("could not load state from file %s: %w", url.Path, err)
+		return nil, err
 	}
 
 	pos := s.GetDefinitionOf(int(params.Position.Line)+1, int(params.Position.Character)+1)
@@ -100,14 +143,9 @@ func definition(context *glsp.Context, params *protocol.DefinitionParams) (any, 
 }
 
 func hover(context *glsp.Context, params *protocol.HoverParams) (*protocol.Hover, error) {
-	url, err := url.Parse(params.TextDocument.URI)
+	s, err := loadFile(params.TextDocument.URI)
 	if err != nil {
-		return nil, fmt.Errorf("could not parse file uri: %w", err)
-	}
-
-	s, err := state.NewFromFile(url.Path)
-	if err != nil {
-		return nil, fmt.Errorf("could not load state from file %s: %w", url.Path, err)
+		return nil, err
 	}
 
 	mu, pos := s.GetHoverOf(int(params.Position.Line)+1, int(params.Position.Character)+1)
