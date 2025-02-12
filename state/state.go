@@ -76,12 +76,17 @@ func PreludeState() *State {
 
 func (s *State) GetDefinitionOf(line, col int) *Position {
 	sym := s.locator.get(line, col)
-	ty := lift[*ast.Type](sym)
-	if ty == nil {
+	typeName := ""
+	switch symTy := sym.(type) {
+	case *ast.Type:
+		typeName = symTy.Name()
+	case *ast.Definition:
+		typeName = symTy.Name
+	default:
 		return nil
 	}
 
-	defType, ok := s.schema.Types[ty.Name()]
+	defType, ok := s.schema.Types[typeName]
 	if !ok {
 		return nil
 	}
@@ -119,30 +124,34 @@ func formatDescriptionMarkdown(def ast.Definition) string {
 
 func (s *State) GetHoverOf(line, col int) (*protocol.MarkupContent, *Position) {
 	sym := s.locator.get(line, col)
+	typeName := ""
 	switch ty := sym.(type) {
 	case *ast.Type:
 		if ty == nil {
 			return nil, nil
 		}
-
-		defType, ok := s.schema.Types[ty.Name()]
-		if !ok {
-			return nil, nil
-		}
-
-		mu := protocol.MarkupContent{
-			Kind:  protocol.MarkupKindMarkdown,
-			Value: formatDescriptionMarkdown(*defType),
-		}
-
-		return &mu, &Position{
-			Line:    defType.Position.Line,
-			Col:     defType.Position.Column,
-			Len:     defType.Position.End - defType.Position.Start,
-			Prelude: defType.BuiltIn,
-		}
+		typeName = ty.Name()
+	case *ast.Definition:
+		typeName = ty.Name
 	default:
 		return nil, nil
+	}
+
+	defType, ok := s.schema.Types[typeName]
+	if !ok {
+		return nil, nil
+	}
+
+	mu := protocol.MarkupContent{
+		Kind:  protocol.MarkupKindMarkdown,
+		Value: formatDescriptionMarkdown(*defType),
+	}
+
+	return &mu, &Position{
+		Line:    defType.Position.Line,
+		Col:     defType.Position.Column,
+		Len:     defType.Position.End - defType.Position.Start,
+		Prelude: defType.BuiltIn,
 	}
 }
 
